@@ -14,8 +14,11 @@ import { StylometryWidget } from '@/components/StylometryWidget';
 import { MCPToolsView } from '@/components/MCPToolsView';
 import { MultiImageUploader, UploadedImage, ImageAnalysisResult } from '@/components/MultiImageUploader';
 import { ImageAnalysisResults } from '@/components/ImageAnalysisResults';
+import { ResearchSequenceBuilder } from '@/components/ResearchSequenceBuilder';
+import { ResearchSequenceRunner } from '@/components/ResearchSequenceRunner';
+import { ResearchSequence } from '@/lib/types/research-sequence';
 import { UserHints } from '@/lib/types';
-import { Atom, Sparkles, BarChart3, Network, Shield, Radar, Loader2, BrainCircuit, Calendar, ScanLine, LogOut, FileText, Box, Image } from 'lucide-react';
+import { Atom, Sparkles, BarChart3, Network, Shield, Radar, Loader2, BrainCircuit, Calendar, ScanLine, LogOut, FileText, Box, Image, Workflow } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,7 +27,7 @@ import { signOut, useSession } from 'next-auth/react';
 
 export default function SocialIntelligenceEngine() {
   const { data: session } = useSession();
-  const [activeView, setActiveView] = useState<'search' | 'analytics' | 'graph' | 'risk' | 'forensics' | 'mcp' | 'images'>('search');
+  const [activeView, setActiveView] = useState<'search' | 'analytics' | 'graph' | 'risk' | 'forensics' | 'mcp' | 'images' | 'sequence'>('search');
 
   // Search state
   const [name, setName] = useState('');
@@ -38,6 +41,10 @@ export default function SocialIntelligenceEngine() {
   const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
   const [isAnalyzingImages, setIsAnalyzingImages] = useState(false);
   const [crossImageInsights, setCrossImageInsights] = useState<any>(null);
+
+  // Research sequence state
+  const [selectedSequence, setSelectedSequence] = useState<ResearchSequence | null>(null);
+  const [showSequenceBuilder, setShowSequenceBuilder] = useState(false);
 
   const [hints, setHints] = useState<UserHints>({
     age: '', job: '', company: '', location: '',
@@ -270,6 +277,9 @@ export default function SocialIntelligenceEngine() {
             <Button size="sm" variant={activeView === 'images' ? 'default' : 'ghost'} onClick={() => setActiveView('images')} className="text-xs">
               <Image className="h-3 w-3 mr-1" /> Images
             </Button>
+            <Button size="sm" variant={activeView === 'sequence' ? 'default' : 'ghost'} onClick={() => setActiveView('sequence')} className="text-xs">
+              <Workflow className="h-3 w-3 mr-1" /> Sequence
+            </Button>
             <Button size="sm" variant={activeView === 'mcp' ? 'default' : 'ghost'} onClick={() => setActiveView('mcp')} className="text-xs">
               <Box className="h-3 w-3 mr-1" /> MCP Tools
             </Button>
@@ -372,6 +382,43 @@ export default function SocialIntelligenceEngine() {
                   images={uploadedImages}
                   crossImageInsights={crossImageInsights}
                 />
+              </div>
+            )}
+
+            {activeView === 'sequence' && (
+              <div className="space-y-4">
+                {selectedSequence ? (
+                  <ResearchSequenceRunner
+                    sequence={selectedSequence}
+                    initialSubject={{ name, email, phone, username, imageBase64, hints }}
+                  />
+                ) : (
+                  <Card>
+                    <CardContent className="p-6">
+                      <ResearchSequenceBuilder
+                        onSave={(seq) => {
+                          setSelectedSequence(seq);
+                          setShowSequenceBuilder(false);
+                        }}
+                        onRun={(seq) => {
+                          setSelectedSequence(seq);
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+                {selectedSequence && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedSequence(null);
+                      setShowSequenceBuilder(true);
+                    }}
+                  >
+                    <Workflow className="h-3 w-3 mr-1" /> Edit Sequence
+                  </Button>
+                )}
               </div>
             )}
 
