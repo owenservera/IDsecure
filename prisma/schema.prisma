@@ -1,0 +1,154 @@
+// IDsecure Prisma Schema - SQLite (Local Development)
+// For production: migrate to PostgreSQL (see ENHANCEMENT_PLAN.md)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String?
+  organizationId String?
+  investigations Investigation[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([organizationId])
+}
+
+model Investigation {
+  id             String          @id @default(cuid())
+  name           String?
+  email          String?
+  phone          String?
+  username       String?
+  userId         String?
+  user           User?           @relation(fields: [userId], references: [id])
+  organizationId String?
+  status         String          @default("completed")
+  priority       Int             @default(0)
+  results        SearchResult[]
+  riskAssessment RiskAssessment?
+  breaches       BreachIncident[]
+  forensicReports ForensicReport[]
+  tags           String?         // Comma-separated for SQLite
+  notes          String?
+  metadata       String          @default("{}")  // JSON string for SQLite
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([email])
+  @@index([username])
+  @@index([userId])
+  @@index([status])
+}
+
+model SearchResult {
+  id              String        @id @default(cuid())
+  investigationId String
+  investigation   Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  platform        String
+  url             String
+  title           String
+  snippet         String
+  confidence      Float
+  location        String?
+  company         String?
+  profession      String?
+  stage           Int
+  metadata        String        @default("{}")  // JSON string for SQLite
+  profileImage    String?
+  education       String?
+  connections     String?
+  lastActive      String?
+  verified        Boolean       @default(false)
+  crossRefCount   Int           @default(0)
+  createdAt       DateTime      @default(now())
+
+  @@index([investigationId])
+  @@index([platform])
+  @@index([confidence])
+}
+
+model RiskAssessment {
+  id              String        @id @default(cuid())
+  investigationId String        @unique
+  investigation   Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  overallScore    Int
+  riskLevel       String        @default("low")
+  factors         String
+  credibilityScore Int          @default(0)
+  threatIndicators String
+  recommendations String
+  timestamp       DateTime      @default(now())
+
+  @@index([riskLevel])
+}
+
+model BreachIncident {
+  id              String        @id @default(cuid())
+  investigationId String
+  investigation   Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  source          String
+  type            String
+  severity        String
+  title           String
+  description     String
+  exposedData     String
+  dateDiscovered  String?
+  status          String        @default("unknown")
+  remediation     String
+  metadata        String        @default("{}")  // JSON string for SQLite
+  createdAt       DateTime      @default(now())
+
+  @@index([investigationId])
+  @@index([severity])
+}
+
+model ForensicReport {
+  id              String        @id @default(cuid())
+  investigationId String
+  investigation   Investigation @relation(fields: [investigationId], references: [id], onDelete: Cascade)
+  reportType      String
+  authenticityScore Float
+  deepfakeRisk    String        @default("low")
+  metadata        String        @default("{}")  // JSON string for SQLite
+  findings        String
+  createdAt       DateTime      @default(now())
+
+  @@index([investigationId])
+}
+
+// Simple cache for development (use Redis in production)
+model Cache {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([key])
+}
+
+// Job queue for background processing (use BullMQ in production)
+model Job {
+  id        String   @id @default(cuid())
+  type      String
+  status    String   @default("pending")
+  priority  Int      @default(0)
+  data      String   @default("{}")  // JSON string for SQLite
+  result    String?
+  error     String?
+  attempts  Int      @default(0)
+  scheduledAt DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([type])
+}

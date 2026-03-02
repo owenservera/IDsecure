@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Next.js: debug",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bun run dev"
+    },
+    {
+      "name": "Next.js: debug verbose",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bun run debug:verbose"
+    }
+  ]
+}

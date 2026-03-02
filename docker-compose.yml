@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: idsecure-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - idsecure-network
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: idsecure-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: idsecure
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - idsecure-network
+
+  postgres-replica:
+    image: postgres:15-alpine
+    container_name: idsecure-postgres-replica
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: idsecure
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+      PGDATA: /var/lib/postgresql/data/replica
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "
+        until pg_isready -h postgres -U postgres; do
+          echo 'Waiting for primary...'
+          sleep 2
+        done
+        echo 'Primary is ready, setting up replica...'
+        rm -rf /var/lib/postgresql/data/replica/* || true
+        PGPASSWORD=postgres pg_basebackup -h postgres -D /var/lib/postgresql/data/replica -U postgres -P -R -X stream -C -S
+        echo 'standby_mode = on' >> /var/lib/postgresql/data/replica/postgresql.auto.conf
+        echo 'primary_conninfo = host=postgres port=5432 user=postgres' >> /var/lib/postgresql/data/replica/postgresql.auto.conf
+        echo 'Replica configured, starting...'
+        postgres
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - idsecure-network
+
+volumes:
+  redis-data:
+    driver: local
+  postgres-data:
+    driver: local
+  postgres-replica-data:
+    driver: local
+
+networks:
+  idsecure-network:
+    driver: bridge

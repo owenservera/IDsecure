@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database with pgvector extension
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: idsecure-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: idsecure
+      POSTGRES_PASSWORD: idsecure_password_change_in_production
+      POSTGRES_DB: idsecure
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U idsecure -d idsecure"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - idsecure-network
+
+  # Redis Cache & Message Queue
+  redis:
+    image: redis:7-alpine
+    container_name: idsecure-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass idsecure_redis_password_change_in_production
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - idsecure-network
+
+  # Redis Commander (Redis GUI) - Optional
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: idsecure-redis-commander
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:idsecure_redis_password_change_in_production
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - idsecure-network
+
+  # PgAdmin (PostgreSQL GUI) - Optional
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: idsecure-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@idsecure.local
+      PGADMIN_DEFAULT_PASSWORD: admin_password_change_in_production
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8082:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - idsecure-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  idsecure-network:
+    driver: bridge

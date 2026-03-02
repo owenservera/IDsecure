@@ -1,0 +1,15 @@
+{
+  "name": "idsecure-load-tests",
+  "version": "1.0.0",
+  "description": "Load testing suite for IDsecure",
+  "scripts": {
+    "test:load:search": "node tests/load/load-test.js search 50 30",
+    "test:load:search-power": "node tests/load/load-test.js search-power 50 30",
+    "test:load:analytics": "node tests/load/load-test.js analytics 100 30",
+    "test:load:all": "node tests/load/run-all-tests.js",
+    "test:load:stress": "node tests/load/load-test.js search 200 60"
+  },
+  "devDependencies": {
+    "autocannon": "^7.14.0"
+  }
+}

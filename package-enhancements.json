@@ -1,0 +1,13 @@
+{
+  "dependencies": {
+    "ioredis": "^5.4.1",
+    "bullmq": "^5.7.2",
+    "reportlab": "^4.0.8"
+  },
+  "devDependencies": {
+    "@types/ioredis": "^4.28.10",
+    "autocannon": "^7.15.0",
+    "vitest": "^1.2.2",
+    "@vitest/coverage-v8": "^1.2.2"
+  }
+}
