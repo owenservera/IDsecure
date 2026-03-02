@@ -210,13 +210,18 @@ Generate a professional executive summary in Markdown format with these sections
 
 Keep it concise and professional.`;
 
+  // Use text model with thinking mode for complex report generation
+  const textModel = process.env.ZAI_MODEL_TEXT || 'glm-4.7-flash';
+
   const completion = await zai.chat.completions.create({
+    model: textModel,
     messages: [
-      { role: 'system', content: 'You are an expert investigative analyst writing executive summaries for legal and corporate cases.' },
+      { role: 'system', content: 'You are an expert investigative analyst writing executive summaries for legal and corporate cases. Think step-by-step to ensure comprehensive analysis.' },
       { role: 'user', content: prompt },
     ],
     temperature: 0.3,
-    max_tokens: 1000,
+    thinking: { type: 'enabled' },
+    max_tokens: 2048,
   });
 
   return completion.choices[0]?.message?.content || 'Failed to generate executive summary';
@@ -281,13 +286,18 @@ Generate a professional forensics analysis in Markdown format with these section
 
 Keep it technical and actionable.`;
 
+  // Use advanced vision model for forensics analysis
+  const visionModel = process.env.ZAI_MODEL_VISION_ADVANCED || 'glm-4.6v';
+
   const completion = await zai.chat.completions.create({
+    model: visionModel,
     messages: [
-      { role: 'system', content: 'You are a digital forensics expert specializing in OSINT investigations.' },
+      { role: 'system', content: 'You are a digital forensics expert specializing in OSINT investigations. Think step-by-step for thorough analysis.' },
       { role: 'user', content: prompt },
     ],
     temperature: 0.3,
-    max_tokens: 1000,
+    thinking: { type: 'enabled' },
+    max_tokens: 2048,
   });
 
   return completion.choices[0]?.message?.content || 'No forensics analysis available.';

@@ -108,12 +108,19 @@ Provide detailed analysis in JSON format:
             });
           }
 
+          // Use advanced vision model with thinking mode for deep forensic analysis
+          const advancedModel = process.env.ZAI_MODEL_VISION_ADVANCED || 'glm-4.6v';
+
           const completion = await zai.chat.completions.create({
+            model: advancedModel,
             messages: [
-              { role: 'system', content: 'You are an expert digital forensics analyst specializing in image authentication and deep fake detection. Provide detailed JSON analysis.' },
+              { role: 'system', content: 'You are an expert digital forensics analyst specializing in image authentication and deep fake detection. Think step-by-step and provide detailed JSON analysis.' },
               ...messages
             ],
             temperature: 0.2,
+            thinking: { type: 'enabled' },
+            response_format: { type: 'json_object' },
+            max_tokens: 4096
           });
 
           const content = completion.choices[0]?.message?.content || '';
@@ -188,12 +195,18 @@ JSON format:
   "searchQueries": ["list of search strings"]
 }`;
 
+        // Use Flash model for simple reverse search (cost-effective)
+        const flashModel = process.env.ZAI_MODEL_VISION || 'glm-4.6v-flash';
+
         const completion = await zai.chat.completions.create({
+          model: flashModel,
           messages: [
             { role: 'system', content: 'You are an expert in reverse image search optimization. Provide accurate JSON.' },
             { role: 'user', content: reverseSearchPrompt }
           ],
           temperature: 0.3,
+          response_format: { type: 'json_object' },
+          max_tokens: 2048
         });
 
         const content = completion.choices[0]?.message?.content || '';

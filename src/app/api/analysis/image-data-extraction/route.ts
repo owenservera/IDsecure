@@ -47,6 +47,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Use GLM-4.6V-Flash for cost-effective image analysis (FREE tier)
+    const visionModel = process.env.ZAI_MODEL_VISION || 'glm-4.6v-flash';
+
     const analysisPromises = images.map(async (image) => {
       try {
         const analysisPrompt = `You are an expert document and image analyst. Analyze this image and extract ALL key data.
@@ -146,6 +149,7 @@ Be thorough and precise. Extract EVERY piece of readable information.`;
         ];
 
         const completion = await zai.chat.completions.create({
+          model: visionModel,
           messages: [
             {
               role: 'system',
@@ -154,6 +158,8 @@ Be thorough and precise. Extract EVERY piece of readable information.`;
             ...messages
           ],
           temperature: 0.1,
+          response_format: { type: 'json_object' },
+          max_tokens: 4096
         });
 
         const content = completion.choices[0]?.message?.content || '';
@@ -190,6 +196,9 @@ Be thorough and precise. Extract EVERY piece of readable information.`;
     let crossImageInsights = null;
     if (successfulAnalyses.length > 1) {
       try {
+        // Use advanced model with thinking mode for complex cross-analysis
+        const advancedModel = process.env.ZAI_MODEL_VISION_ADVANCED || 'glm-4.6v';
+        
         const insightsPrompt = `Analyze these ${successfulAnalyses.length} image analysis results and find connections:
 
 ${successfulAnalyses.map((r, i) => `
@@ -223,10 +232,11 @@ JSON format:
 }`;
 
         const completion = await zai.chat.completions.create({
+          model: advancedModel,
           messages: [
             {
               role: 'system',
-              content: 'You are an investigative analyst. Find connections across multiple pieces of evidence. Respond with valid JSON.'
+              content: 'You are an investigative analyst. Find connections across multiple pieces of evidence. Think step-by-step and respond with valid JSON.'
             },
             {
               role: 'user',
@@ -234,6 +244,9 @@ JSON format:
             }
           ],
           temperature: 0.2,
+          thinking: { type: 'enabled' },
+          response_format: { type: 'json_object' },
+          max_tokens: 4096
         });
 
         const content = completion.choices[0]?.message?.content || '';
