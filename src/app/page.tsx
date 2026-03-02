@@ -12,8 +12,10 @@ import { IdentityTimeline } from '@/components/IdentityTimeline';
 import { ForensicsView } from '@/components/ForensicsView';
 import { StylometryWidget } from '@/components/StylometryWidget';
 import { MCPToolsView } from '@/components/MCPToolsView';
+import { MultiImageUploader, UploadedImage, ImageAnalysisResult } from '@/components/MultiImageUploader';
+import { ImageAnalysisResults } from '@/components/ImageAnalysisResults';
 import { UserHints } from '@/lib/types';
-import { Atom, Sparkles, BarChart3, Network, Shield, Radar, Loader2, BrainCircuit, Calendar, ScanLine, LogOut, FileText, Box } from 'lucide-react';
+import { Atom, Sparkles, BarChart3, Network, Shield, Radar, Loader2, BrainCircuit, Calendar, ScanLine, LogOut, FileText, Box, Image } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,8 +24,8 @@ import { signOut, useSession } from 'next-auth/react';
 
 export default function SocialIntelligenceEngine() {
   const { data: session } = useSession();
-  const [activeView, setActiveView] = useState<'search' | 'analytics' | 'graph' | 'risk' | 'forensics' | 'mcp'>('search');
-  
+  const [activeView, setActiveView] = useState<'search' | 'analytics' | 'graph' | 'risk' | 'forensics' | 'mcp' | 'images'>('search');
+
   // Search state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -31,6 +33,11 @@ export default function SocialIntelligenceEngine() {
   const [username, setUsername] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
+
+  // Multi-image upload state
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
+  const [isAnalyzingImages, setIsAnalyzingImages] = useState(false);
+  const [crossImageInsights, setCrossImageInsights] = useState<any>(null);
 
   const [hints, setHints] = useState<UserHints>({
     age: '', job: '', company: '', location: '',
@@ -123,6 +130,62 @@ export default function SocialIntelligenceEngine() {
     }
   }, []);
 
+  const handleAnalyzeImages = useCallback(async (images: UploadedImage[]) => {
+    if (images.length === 0) return;
+
+    setIsAnalyzingImages(true);
+    setCrossImageInsights(null);
+
+    try {
+      // Update status to analyzing
+      setUploadedImages(prev => prev.map(img => ({
+        ...img,
+        status: 'analyzing' as const
+      })));
+
+      const response = await fetch('/api/analysis/image-data-extraction', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          images: images.map(img => ({
+            base64: img.base64,
+            filename: img.file.name
+          }))
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update images with analysis results
+        setUploadedImages(prev => prev.map(img => {
+          const result = data.results.find((r: any) => r.filename === img.file.name);
+          if (result) {
+            return {
+              ...img,
+              status: 'analyzed' as const,
+              analysis: result.analysis as ImageAnalysisResult
+            };
+          }
+          return img;
+        }));
+
+        // Set cross-image insights if available
+        if (data.crossImageInsights) {
+          setCrossImageInsights(data.crossImageInsights);
+        }
+      }
+    } catch (error) {
+      console.error('Image analysis failed:', error);
+      setUploadedImages(prev => prev.map(img => ({
+        ...img,
+        status: 'error' as const
+      })));
+    } finally {
+      setIsAnalyzingImages(false);
+    }
+  }, []);
+
   const handleSearch = () => {
     executeSearch({
       name, email, phone, username,
@@ -203,6 +266,9 @@ export default function SocialIntelligenceEngine() {
             </Button>
             <Button size="sm" variant={activeView === 'forensics' ? 'default' : 'ghost'} onClick={() => setActiveView('forensics')} className="text-xs">
               <ScanLine className="h-3 w-3 mr-1" /> Forensics
+            </Button>
+            <Button size="sm" variant={activeView === 'images' ? 'default' : 'ghost'} onClick={() => setActiveView('images')} className="text-xs">
+              <Image className="h-3 w-3 mr-1" /> Images
             </Button>
             <Button size="sm" variant={activeView === 'mcp' ? 'default' : 'ghost'} onClick={() => setActiveView('mcp')} className="text-xs">
               <Box className="h-3 w-3 mr-1" /> MCP Tools
@@ -290,6 +356,21 @@ export default function SocialIntelligenceEngine() {
 
             {activeView === 'forensics' && (
               <ForensicsView forensics={forensicResults} />
+            )}
+
+            {activeView === 'images' && (
+              <div className="space-y-4">
+                <MultiImageUploader
+                  images={uploadedImages}
+                  onImagesChange={setUploadedImages}
+                  onAnalyze={handleAnalyzeImages}
+                  isAnalyzing={isAnalyzingImages}
+                />
+                <ImageAnalysisResults
+                  images={uploadedImages}
+                  crossImageInsights={crossImageInsights}
+                />
+              </div>
             )}
 
             {activeView === 'mcp' && (
