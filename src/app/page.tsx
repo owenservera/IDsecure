@@ -12,7 +12,7 @@ import { IdentityTimeline } from '@/components/IdentityTimeline';
 import { ForensicsView } from '@/components/ForensicsView';
 import { StylometryWidget } from '@/components/StylometryWidget';
 import { MCPToolsView } from '@/components/MCPToolsView';
-import { MultiImageUploader, UploadedImage, ImageAnalysisResult } from '@/components/MultiImageUploader';
+import { MultiImageUploader, UploadedImage, ImageAnalysisResult, ExtractedSearchData } from '@/components/MultiImageUploader';
 import { ImageAnalysisResults } from '@/components/ImageAnalysisResults';
 import { ResearchSequenceBuilder } from '@/components/ResearchSequenceBuilder';
 import { ResearchSequenceRunner } from '@/components/ResearchSequenceRunner';
@@ -191,6 +191,18 @@ export default function SocialIntelligenceEngine() {
     } finally {
       setIsAnalyzingImages(false);
     }
+  }, []);
+
+  const handleExtractImageData = useCallback((extracted: ExtractedSearchData) => {
+    // Populate search fields with extracted data
+    if (extracted.name) setName(extracted.name);
+    if (extracted.email) setEmail(extracted.email);
+    if (extracted.phone) setPhone(extracted.phone);
+    if (extracted.username) setUsername(extracted.username);
+    if (extracted.location) setHints(prev => ({ ...prev, location: extracted.location || '' }));
+    
+    // Switch to search view to show the populated fields
+    setActiveView('search');
   }, []);
 
   const handleSearch = () => {
@@ -376,6 +388,7 @@ export default function SocialIntelligenceEngine() {
                   images={uploadedImages}
                   onImagesChange={setUploadedImages}
                   onAnalyze={handleAnalyzeImages}
+                  onExtractData={handleExtractImageData}
                   isAnalyzing={isAnalyzingImages}
                 />
                 <ImageAnalysisResults

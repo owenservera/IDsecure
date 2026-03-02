@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Upload, X, Image, FileText, Loader2, Sparkles, Trash2 } from 'lucide-react';
+import { Upload, X, Image, FileText, Loader2, Sparkles, Trash2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -44,13 +44,23 @@ interface MultiImageUploaderProps {
   images: UploadedImage[];
   onImagesChange: (images: UploadedImage[]) => void;
   onAnalyze?: (images: UploadedImage[]) => void;
+  onExtractData?: (extractedData: ExtractedSearchData) => void;
   isAnalyzing?: boolean;
+}
+
+export interface ExtractedSearchData {
+  name?: string;
+  email?: string;
+  phone?: string;
+  username?: string;
+  location?: string;
 }
 
 export function MultiImageUploader({
   images,
   onImagesChange,
   onAnalyze,
+  onExtractData,
   isAnalyzing = false
 }: MultiImageUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -76,6 +86,60 @@ export function MultiImageUploader({
       reader.readAsDataURL(file);
     });
   }, []);
+
+  const extractSearchData = useCallback((analysis: ImageAnalysisResult): ExtractedSearchData => {
+    const data = analysis.detectedData;
+    const extracted: ExtractedSearchData = {};
+
+    // Extract name (first item from names array)
+    if (data.names && data.names.length > 0) {
+      extracted.name = data.names[0];
+    }
+
+    // Extract email (first valid email)
+    if (data.emails && data.emails.length > 0) {
+      extracted.email = data.emails[0];
+    }
+
+    // Extract phone (first valid phone)
+    if (data.phoneNumbers && data.phoneNumbers.length > 0) {
+      extracted.phone = data.phoneNumbers[0];
+    }
+
+    // Extract username from text content or organizations
+    if (data.textContent) {
+      const usernameMatch = data.textContent.match(/@([a-zA-Z0-9_]+)/);
+      if (usernameMatch) {
+        extracted.username = usernameMatch[1];
+      }
+    }
+
+    // Extract location
+    if (data.locations && data.locations.length > 0) {
+      extracted.location = data.locations[0];
+    }
+
+    return extracted;
+  }, []);
+
+  const handleExtractToSearch = useCallback(() => {
+    const analyzedImages = images.filter(img => img.status === 'analyzed' && img.analysis);
+    if (analyzedImages.length === 0 || !onExtractData) return;
+
+    // Combine data from all analyzed images
+    const combinedData: ExtractedSearchData = {};
+    
+    analyzedImages.forEach(img => {
+      const extracted = extractSearchData(img.analysis!);
+      if (extracted.name && !combinedData.name) combinedData.name = extracted.name;
+      if (extracted.email && !combinedData.email) combinedData.email = extracted.email;
+      if (extracted.phone && !combinedData.phone) combinedData.phone = extracted.phone;
+      if (extracted.username && !combinedData.username) combinedData.username = extracted.username;
+      if (extracted.location && !combinedData.location) combinedData.location = extracted.location;
+    });
+
+    onExtractData(combinedData);
+  }, [images, onExtractData, extractSearchData]);
 
   const handleFiles = useCallback(async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
@@ -142,17 +206,34 @@ export function MultiImageUploader({
                 {images.length} image{images.length !== 1 ? 's' : ''}
               </Badge>
             )}
+            {images.some(img => img.status === 'analyzed') && (
+              <Badge variant="default" className="ml-1 text-xs bg-green-600">
+                <CheckCircle2 className="h-3 w-3 mr-1" /> Analyzed
+              </Badge>
+            )}
           </div>
-          {images.length > 0 && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={clearAll}
-              className="h-7 text-xs text-red-600 hover:text-red-700"
-            >
-              <Trash2 className="h-3 w-3 mr-1" /> Clear All
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {images.some(img => img.status === 'analyzed') && onExtractData && (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={handleExtractToSearch}
+                className="h-7 text-xs bg-blue-600 hover:bg-blue-700"
+              >
+                <FileText className="h-3 w-3 mr-1" /> Extract to Search
+              </Button>
+            )}
+            {images.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={clearAll}
+                className="h-7 text-xs text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-3 w-3 mr-1" /> Clear All
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Drop Zone */}
