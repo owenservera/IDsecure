@@ -11,7 +11,7 @@ const SearchRequestSchema = z.object({
   phone: z.string().optional(),
   username: z.string().optional(),
   imageBase64: z.string().optional(),
-  hints: z.record(z.any()).optional(),
+  hints: z.record(z.string(), z.any()).optional(),
   stages: z.number().min(1).max(10).default(5),
   aggressive: z.boolean().default(false),
   aiRefinement: z.boolean().default(true),

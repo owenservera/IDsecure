@@ -294,33 +294,35 @@ export default function SocialIntelligenceEngine() {
         )}
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
-          <div className="xl:col-span-1 space-y-4">
-            <SearchForm
-              name={name} setName={setName}
-              email={email} setEmail={setEmail}
-              phone={phone} setPhone={setPhone}
-              username={username} setUsername={setUsername}
-              imagePreview={imagePreview} handleImageUpload={handleImageUpload}
-              resetImage={() => { setImagePreview(null); setImageBase64(null); }}
-              fileInputRef={fileInputRef}
-              hints={hints} setHints={setHints}
-              powerModeEnabled={powerModeEnabled} setPowerModeEnabled={setPowerModeEnabled}
-              stageCount={stageCount} setStageCount={setStageCount}
-              aggressiveMode={aggressiveMode} setAggressiveMode={setAggressiveMode}
-              confidenceThreshold={confidenceThreshold} setConfidenceThreshold={setConfidenceThreshold}
-              onSearch={handleSearch}
-              isSearching={isSearching}
-              currentStage={currentStage}
-              totalStages={stageCount[0]}
-            />
-            
-            <InvestigationHistory onSelect={(id) => {
-              loadInvestigation(id);
-              setActiveView('search');
-            }} />
-          </div>
+          {activeView !== 'images' && (
+            <div className="xl:col-span-1 space-y-4">
+              <SearchForm
+                name={name} setName={setName}
+                email={email} setEmail={setEmail}
+                phone={phone} setPhone={setPhone}
+                username={username} setUsername={setUsername}
+                imagePreview={imagePreview} handleImageUpload={handleImageUpload}
+                resetImage={() => { setImagePreview(null); setImageBase64(null); }}
+                fileInputRef={fileInputRef}
+                hints={hints} setHints={setHints}
+                powerModeEnabled={powerModeEnabled} setPowerModeEnabled={setPowerModeEnabled}
+                stageCount={stageCount} setStageCount={setStageCount}
+                aggressiveMode={aggressiveMode} setAggressiveMode={setAggressiveMode}
+                confidenceThreshold={confidenceThreshold} setConfidenceThreshold={setConfidenceThreshold}
+                onSearch={handleSearch}
+                isSearching={isSearching}
+                currentStage={currentStage}
+                totalStages={stageCount[0]}
+              />
 
-          <div className="xl:col-span-3">
+              <InvestigationHistory onSelect={(id) => {
+                loadInvestigation(id);
+                setActiveView('search');
+              }} />
+            </div>
+          )}
+
+          <div className={activeView === 'images' ? 'col-span-1' : 'xl:col-span-3'}>
             {activeView === 'search' && (
               <div className="space-y-4">
                 <ResultsList
